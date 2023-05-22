@@ -1,26 +1,67 @@
 <?php
-// session_start();
-include('../../serveur/connexion/register.php');
-include('../addons/navbar.php');
-?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-        <form method="post">
-            <input type="text" name="username" id="username" placeholder="Username" required>
-            <input type="text" name="prenom" id="prenom" placeholder="Prénom" required>
-            <input type="text" name="nom" id="nom" placeholder="Nom" required>
-            <input type="email" name="email" id="email" placeholder="Adresse mail" required>
-            <input type="password" name="password_1"  placeholder="Mot de passe" required>
-            <input type="password" name="password_2"  placeholder="Repeter le mot de passe" required>
-            <button type="submit"  name="reg_user">Inscription</button>
-        </form>
-</body>
-</html>
+include('db.php');
+session_start();
+
+if (isset($_SESSION['username'])) {
+    header("Location: /index.php");
+    exit();
+}
+
+$errors = array();
+
+if (isset($_POST['reg_user'])) {
+    $password_2 = $_POST['password_2'];
+    $username = $_POST['username'];
+    $name = $_POST['nom'];
+    $pastname = $_POST['prenom'];
+    $email = $_POST['email'];
+    $password_1 = $_POST['password_1'];
+
+    // Check if email is already in use
+    $stmt = $pdo->prepare("SELECT * FROM client WHERE mail=:email");
+    $stmt->bindParam(':email', $email);
+    $stmt->execute();
+
+    if ($stmt->rowCount() > 0) {
+        array_push($errors, "This email address is already in use");
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM client WHERE username=:username");
+    $stmt->bindParam(':username', $username);
+    $stmt->execute();
+
+    if ($stmt->rowCount() > 0) {
+        array_push($errors, "This username is already in use");
+    }
+
+    if ($password_1 != $password_2) {
+        array_push($errors, "The two passwords do not match");
+    }
+
+    if (count($errors) == 0) {
+        // Hash the password
+        $password = password_hash($password_1, PASSWORD_DEFAULT);
+
+        // Prepare the SQL statement
+        $stmt = $pdo->prepare("INSERT INTO client (username, prenom, nom, mail, password) VALUES (:username, :pastname, :name, :email, :password)");
+
+        // Bind the parameters to the placeholders
+        $stmt->bindParam(':username', $username);
+        $stmt->bindParam(':email', $email);
+        $stmt->bindParam(':name', $name);
+        $stmt->bindParam(':pastname', $pastname);
+        $stmt->bindParam(':password', $password);
+
+        // Execute the statement
+        $stmt->execute();
+    } else {
+        foreach ($errors as $error) {
+            echo $error . "<br>";
+        }
+    }
+}
+
+
+
+
+
